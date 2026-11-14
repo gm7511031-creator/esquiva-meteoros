@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Jugar Esquiva Meteoros</title>
+<!-- Pegá acá el código de AdSense (el mismo que en las otras páginas) -->
+<style>
+:root{--bg:#0f172a;--fg:#f8fafc;--ac:#facc15;color-scheme:dark;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html,body{height:100%;margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,sans-serif;overflow:hidden;touch-action:none;user-select:none}
+#wrap{position:relative;height:100%}
+canvas{display:block;width:100%;height:100%}
+#hud{position:absolute;top:8px;left:0;right:0;display:flex;justify-content:space-between;padding:0 16px;font-weight:700;font-size:18px;pointer-events:none}
+#ov{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(15,23,42,.85);text-align:center;padding:24px}
+#ov h1{margin:0 0 8px;font-size:32px;color:var(--ac)}
+#ov p{margin:4px 0;opacity:.85}
+button{margin-top:20px;padding:14px 32px;font-size:18px;font-weight:700;border:0;border-radius:999px;background:var(--ac);color:#1e293b}
+</style>
+</head>
+<body>
+<div id="wrap">
+<canvas id="c"></canvas>
+<div id="hud"><span id="s">⭐ 0</span><span id="l">❤️❤️❤️</span><span id="b">Récord: 0</span></div>
+<div id="ov"><h1 id="t">Esquiva Meteoros</h1><p id="m">Arrastrá el dedo (o usá ← →) para mover la nave.</p><p>Esquivá las rocas y juntá las estrellas ⭐</p><button id="go">Jugar</button><button id="sh" style="display:none;background:#38bdf8">Compartir mi puntaje</button><div id="ad" style="margin-top:20px;min-width:250px;min-height:0"><!-- ESPACIO PARA ANUNCIO: pegá acá el código de AdSense/AdMob cuando alojes el juego en tu propio hosting --></div><p style="margin-top:20px;font-size:14px;opacity:.85"><a href="index.html" style="color:#38bdf8">Inicio</a> &nbsp; <a href="como-jugar.html" style="color:#38bdf8">Cómo jugar</a> &nbsp; <a href="privacidad.html" style="color:#38bdf8">Privacidad</a></p></div>
+</div>
+<script>
+const c=document.getElementById('c'),x=c.getContext('2d');
+const $=i=>document.getElementById(i);
+let W,H,tx,items,score,lives,best=0,run=false,last=0,acc=0,lvl=1,inv=0,keys={};
+try{best=+localStorage.getItem('em_best')||0}catch(e){}
+const p={x:0,y:0,r:16};
+function rs(){W=c.width=c.clientWidth;H=c.height=c.clientHeight;p.y=H-70;if(tx==null)tx=W/2}
+addEventListener('resize',rs);rs();p.x=W/2;
+function setT(e){const r=c.getBoundingClientRect();tx=e.clientX-r.left}
+c.addEventListener('pointerdown',setT);c.addEventListener('pointermove',setT);
+addEventListener('keydown',e=>keys[e.key]=1);addEventListener('keyup',e=>keys[e.key]=0);
+function hud(){$('s').textContent='⭐ '+score;$('l').textContent='❤️'.repeat(Math.max(lives,0));$('b').textContent='Récord: '+best}
+function start(){items=[];score=0;lives=3;lvl=1;acc=0;inv=0;p.x=W/2;tx=W/2;run=true;$('ov').style.display='none';hud();last=performance.now();requestAnimationFrame(loop)}
+function end(){run=false;if(score>best){best=score;try{localStorage.setItem('em_best',best)}catch(e){}}
+$('t').textContent='¡Game over!';$('m').textContent='Puntaje: '+score+' · Récord: '+best;$('go').textContent='Jugar de nuevo';$('sh').style.display='inline-block';$('ov').style.display='flex';hud()}
+$('go').addEventListener('click',start);
+$('sh').addEventListener('click',async()=>{const t='Hice '+score+' puntos en Esquiva Meteoros ☄️ ¿Podés superarme?',u=location.href;try{if(navigator.share){await navigator.share({text:t,url:u});return}}catch(e){}try{await navigator.clipboard.writeText(t+' '+u);$('sh').textContent='¡Copiado!'}catch(e){$('sh').textContent='Copiá el enlace'}setTimeout(()=>$('sh').textContent='Compartir mi puntaje',2000)});
+function loop(now){if(!run)return;const dt=Math.min((now-last)/1000,.05);last=now;
+lvl=1+Math.floor(score/10);
+if(keys.ArrowLeft||keys.a)tx=p.x-400*dt*3;if(keys.ArrowRight||keys.d)tx=p.x+400*dt*3;
+tx=Math.max(p.r,Math.min(W-p.r,tx));p.x+=(tx-p.x)*Math.min(1,dt*14);
+acc+=dt;const gap=Math.max(.25,.8-lvl*.05);
+if(acc>gap){acc=0;const star=Math.random()<.3;items.push({x:20+Math.random()*(W-40),y:-20,r:star?12:14+Math.random()*10,v:(star?150:180)+lvl*22+Math.random()*60,star})}
+if(inv>0)inv-=dt;
+for(const i of items){i.y+=i.v*dt;if(Math.hypot(i.x-p.x,i.y-p.y)<i.r+p.r-3){i.dead=1;if(i.star){score++}else if(inv<=0){lives--;inv=1.2}}else if(i.y>H+30){i.dead=1}}
+items=items.filter(i=>!i.dead);hud();draw();if(lives<=0){end();return}requestAnimationFrame(loop)}
+function draw(){x.clearRect(0,0,W,H);
+x.fillStyle='#fff';for(let k=0;k<30;k++){x.globalAlpha=.3;x.fillRect((k*97)%W,(k*53+performance.now()/20*(1+k%3))%H,2,2)}x.globalAlpha=1;
+for(const i of items){if(i.star){x.font=(i.r*2)+'px serif';x.textAlign='center';x.textBaseline='middle';x.fillText('⭐',i.x,i.y)}else{x.fillStyle='#94a3b8';x.beginPath();x.arc(i.x,i.y,i.r,0,7);x.fill();x.fillStyle='#64748b';x.beginPath();x.arc(i.x-i.r/3,i.y-i.r/4,i.r/3,0,7);x.fill()}}
+if(inv<=0||Math.floor(inv*10)%2){x.fillStyle='#38bdf8';x.beginPath();x.moveTo(p.x,p.y-p.r-4);x.lineTo(p.x+p.r,p.y+p.r);x.lineTo(p.x,p.y+p.r-6);x.lineTo(p.x-p.r,p.y+p.r);x.closePath();x.fill()}}
+hud();
+</script>
+</body>
+</html>
